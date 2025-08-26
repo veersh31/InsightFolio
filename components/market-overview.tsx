@@ -18,7 +18,7 @@ export function MarketOverview() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {marketData.map((index) => (
+          {marketData.map((index, i) => (
             <div key={index.name} className="flex items-center justify-between">
               <div>
                 <p className="font-medium">{index.name}</p>

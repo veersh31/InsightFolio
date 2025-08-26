@@ -28,16 +28,17 @@ export function DashboardHeader({ onStockSelect }: DashboardHeaderProps) {
   const unreadCount = notifications.filter((n) => !n.read).length
 
   const handleStockSelect = (symbol: string) => {
-    console.log("[v0] Stock selected:", symbol)
+  console.log("[InsightFolio] Stock selected:", symbol)
     onStockSelect?.(symbol)
   }
 
   return (
-    <header className="border-b bg-card">
+    <header className="sticky top-0 z-40 border-b bg-white/90 shadow-sm backdrop-blur">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-primary">StockML</h1>
+            <img src="/placeholder-logo.svg" alt="InsightFolio Logo" className="h-8 w-8 rounded" />
+            <h1 className="text-2xl font-extrabold tracking-tight text-primary">InsightFolio</h1>
             <StockSearch onStockSelect={handleStockSelect} />
           </div>
 

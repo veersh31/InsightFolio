@@ -1,30 +1,97 @@
-# Create this logo
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+# InsightFolio
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/veers-projects-746b643c/v0-create-this-logo)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/0CwPElYDAVl)
+**AI-Powered Stock Analytics & Portfolio Dashboard**
 
-## Overview
+InsightFolio is a modern, real-time stock analytics dashboard inspired by the best of Robinhood and Webull. It provides advanced portfolio management, AI-driven insights, and a beautiful, responsive UI built with Next.js, React, and TypeScript.
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+---
 
-## Deployment
+## 🚀 Features
 
-Your project is live at:
+### Real-Time Data & Analytics
+- **Live Stock Quotes**: All data is fetched in real time from Alpha Vantage and Polygon APIs (no mock data).
+- **Market Overview**: S&P 500, NASDAQ, DOW, and more with live price, change, and percent change.
+- **Portfolio Overview**: See your total value, daily change, and total gain/loss at a glance.
 
-**[https://vercel.com/veers-projects-746b643c/v0-create-this-logo](https://vercel.com/veers-projects-746b643c/v0-create-this-logo)**
+### Portfolio Management
+- **Manual Input**: Add, edit, and remove stocks, shares, and average cost directly in the dashboard.
+- **CSV Upload**: Upload your portfolio as a CSV file (`symbol,shares,avgCost`) for instant population.
+- **Persistent State**: Your portfolio is saved in localStorage for seamless experience.
 
-## Build your app
+### Advanced Analytics
+- **AI-Powered Portfolio Optimizer**: Get optimal weights and risk/return stats for your portfolio.
+- **Correlation Matrix**: Visualize correlations between your holdings with a heatmap.
+- **Backtesting**: Simulate historical performance of your portfolio with real price data.
+- **ML Predictions**: View AI-generated price predictions and confidence for selected stocks.
+- **Technical Indicators**: See RSI, MACD, and moving averages for any stock.
+- **Fundamental Analysis**: Get market cap, P/E, PEG, and more for your holdings.
+- **Sentiment & Risk Analytics**: News sentiment and risk metrics for your portfolio and stocks.
 
-Continue building your app on:
+### Modern UI/UX
+- **Sticky Navigation Bar**: Fast tab switching, always accessible.
+- **Responsive Design**: Works beautifully on desktop and mobile.
+- **Colorful, Accessible Cards**: Clear, vibrant metrics for all dashboard sections.
+- **User-Friendly Inputs**: Add stocks, upload CSV, and manage your portfolio with ease.
+- **Welcome Message & Avatar**: Personalized dashboard experience.
 
-**[https://v0.app/chat/projects/0CwPElYDAVl](https://v0.app/chat/projects/0CwPElYDAVl)**
+### Tech Stack
+- **Next.js 15, React 19, TypeScript**
+- **shadcn/ui, Lucide Icons, Nivo Charts**
+- **Alpha Vantage & Polygon APIs**
 
-## How It Works
+---
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## 📦 Getting Started
+
+1. **Clone the repo:**
+	```bash
+	git clone https://github.com/veersh31/MLStock.git
+	cd MLStock
+	```
+2. **Install dependencies:**
+	```bash
+	npm install --legacy-peer-deps
+	# or
+	pnpm install
+	```
+3. **Run the dev server:**
+	```bash
+	npm run dev
+	# or
+	pnpm run dev
+	```
+4. **Open [http://localhost:3000](http://localhost:3000) in your browser.**
+
+---
+
+## 📝 CSV Portfolio Format
+
+Upload a CSV file with the following columns:
+
+```
+symbol,shares,avgCost
+AAPL,10,175.50
+TSLA,5,700.00
+GOOGL,2,2800.00
+```
+
+---
+
+## 🛠️ Customization & API Keys
+- Edit `/lib/data-service.ts` to set your Alpha Vantage and Polygon API keys.
+- All data is fetched live; no mock data is used anywhere.
+
+---
+
+## 📄 License
+MIT
+
+---
+
+## 👤 Author
+- [@veersh31](https://github.com/veersh31)
+
+---
+
+## ⭐️ Star this repo if you like InsightFolio!

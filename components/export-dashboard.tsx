@@ -35,13 +35,13 @@ export function ExportDashboard() {
   const handleExport = () => {
     // Simulate export functionality
     console.log("Exporting with options:", exportOptions)
-    // In a real app, this would generate and download the report
+  // In InsightFolio, this would generate and download the report
   }
 
   const handleShare = () => {
     // Simulate share functionality
     console.log("Sharing with options:", shareOptions)
-    // In a real app, this would generate a shareable link
+  // In InsightFolio, this would generate a shareable link
   }
 
   const updateExportSection = (section: string, checked: boolean) => {
@@ -272,7 +272,7 @@ export function ExportDashboard() {
 
             <div className="p-4 bg-muted rounded-lg">
               <Label className="text-sm font-medium">Preview Link</Label>
-              <p className="text-sm text-muted-foreground mt-1">https://stockml.app/shared/dashboard/abc123xyz</p>
+              <p className="text-sm text-muted-foreground mt-1">https://insightfolio.app/shared/dashboard/abc123xyz</p>
               <Button variant="outline" size="sm" className="mt-2 bg-transparent">
                 Copy Link
               </Button>

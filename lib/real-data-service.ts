@@ -1,3 +1,40 @@
+// Helper: fetch historical daily prices for a symbol
+export async function getHistoricalPrices(symbol: string, startDate: string, endDate: string): Promise<{ date: string; close: number }[]> {
+  // Alpha Vantage TIME_SERIES_DAILY (free, 5 calls/min)
+  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_API_KEY}`
+  try {
+    const resp = await fetch(url)
+    const data = await resp.json()
+    if (data["Error Message"]) {
+      console.error(`Alpha Vantage error for ${symbol}:`, data["Error Message"])
+      throw new Error(`Alpha Vantage error: ${data["Error Message"]}`)
+    }
+    if (data["Note"]) {
+      console.error(`Alpha Vantage note for ${symbol}:`, data["Note"])
+      throw new Error(`Alpha Vantage note: ${data["Note"]}`)
+    }
+    const series = data["Time Series (Daily)"] || {}
+    if (!series || Object.keys(series).length === 0) {
+      console.error(`No historical data found for ${symbol} in Alpha Vantage response.`, data)
+      throw new Error(`No historical data found for ${symbol}.`)
+    }
+    const results: { date: string; close: number }[] = []
+    for (const date in series) {
+      if (date >= startDate && date <= endDate) {
+        results.push({ date, close: parseFloat(series[date]["5. adjusted close"] || series[date]["4. close"]) })
+      }
+    }
+    // Sort by date ascending
+    results.sort((a, b) => a.date.localeCompare(b.date))
+    if (results.length === 0) {
+      console.warn(`No price data for ${symbol} between ${startDate} and ${endDate}`)
+    }
+    return results
+  } catch (err) {
+    console.error(`Failed to fetch historical prices for ${symbol}:`, err)
+    throw err
+  }
+}
 import type {
   Stock,
   Portfolio,
@@ -114,7 +151,7 @@ class RealDataService {
           name: "RSI (14)",
           value: Number.parseFloat(latestRSI.RSI),
           signal:
-            Number.parseFloat(latestRSI.RSI) > 70 ? "Sell" : Number.parseFloat(latestRSI.RSI) < 30 ? "Buy" : "Hold",
+            Number.parseFloat(latestRSI.RSI) > 70 ? "Bearish" : Number.parseFloat(latestRSI.RSI) < 30 ? "Bullish" : "Neutral",
           description: "Relative Strength Index - momentum oscillator",
         })
       }
@@ -133,7 +170,7 @@ class RealDataService {
         indicators.push({
           name: "MACD",
           value: macdValue,
-          signal: macdValue > signalValue ? "Buy" : "Sell",
+          signal: macdValue > signalValue ? "Bullish" : "Bearish",
           description: "Moving Average Convergence Divergence",
         })
       }
@@ -149,7 +186,7 @@ class RealDataService {
         indicators.push({
           name: "SMA (20)",
           value: Number.parseFloat(latestSMA20.SMA),
-          signal: "Hold",
+          signal: "Neutral",
           description: "20-day Simple Moving Average",
         })
       }
@@ -252,27 +289,19 @@ class RealDataService {
         peRatio: Number.parseFloat(overviewData.PERatio) || 0,
         pegRatio: Number.parseFloat(overviewData.PEGRatio) || 0,
         priceToBook: Number.parseFloat(overviewData.PriceToBookRatio) || 0,
+        priceToSales: Number.parseFloat(overviewData.PriceToSalesRatio) || 0,
         debtToEquity: Number.parseFloat(overviewData.DebtToEquityRatio) || 0,
-        roe: Number.parseFloat(overviewData.ReturnOnEquityTTM) || 0,
-        roa: Number.parseFloat(overviewData.ReturnOnAssetsTTM) || 0,
-        grossMargin: Number.parseFloat(overviewData.GrossProfitTTM) || 0,
-        operatingMargin: Number.parseFloat(overviewData.OperatingMarginTTM) || 0,
+        currentRatio: Number.parseFloat(overviewData.CurrentRatio) || 0,
+        quickRatio: Number.parseFloat(overviewData.QuickRatio) || 0,
+        returnOnEquity: Number.parseFloat(overviewData.ReturnOnEquityTTM) || 0,
+        returnOnAssets: Number.parseFloat(overviewData.ReturnOnAssetsTTM) || 0,
         profitMargin: Number.parseFloat(overviewData.ProfitMargin) || 0,
-        revenue: Number.parseFloat(overviewData.RevenueTTM) || 0,
-        revenueGrowth: Number.parseFloat(overviewData.QuarterlyRevenueGrowthYOY) || 0,
-        earningsGrowth: Number.parseFloat(overviewData.QuarterlyEarningsGrowthYOY) || 0,
-        dividendYield: Number.parseFloat(overviewData.DividendYield) || 0,
-        payoutRatio: Number.parseFloat(overviewData.PayoutRatio) || 0,
-        beta: Number.parseFloat(overviewData.Beta) || 1,
-        eps: Number.parseFloat(overviewData.EPS) || 0,
-        bookValue: Number.parseFloat(overviewData.BookValue) || 0,
-        cashPerShare: 0, // Not available in overview
-        currentRatio: 0, // Not available in overview
-        quickRatio: 0, // Not available in overview
+        operatingMargin: Number.parseFloat(overviewData.OperatingMarginTTM) || 0,
+        earningsData: [], // Not available in this API call
       }
 
       this.setCachedData(cacheKey, fundamentalData, 3600000) // 1 hour cache
-      return fundamentalData
+  return fundamentalData
     } catch (error) {
       console.error(`Error fetching fundamental data for ${symbol}:`, error)
       // Return default values on error
@@ -281,23 +310,15 @@ class RealDataService {
         peRatio: 0,
         pegRatio: 0,
         priceToBook: 0,
+        priceToSales: 0,
         debtToEquity: 0,
-        roe: 0,
-        roa: 0,
-        grossMargin: 0,
-        operatingMargin: 0,
-        profitMargin: 0,
-        revenue: 0,
-        revenueGrowth: 0,
-        earningsGrowth: 0,
-        dividendYield: 0,
-        payoutRatio: 0,
-        beta: 1,
-        eps: 0,
-        bookValue: 0,
-        cashPerShare: 0,
         currentRatio: 0,
         quickRatio: 0,
+        returnOnEquity: 0,
+        returnOnAssets: 0,
+        profitMargin: 0,
+        operatingMargin: 0,
+        earningsData: [],
       }
     }
   }
@@ -321,28 +342,30 @@ class RealDataService {
 
         predictions.push({
           symbol: sym,
+          currentPrice,
           predictions: [
             {
-              timeframe: "1 week",
-              targetPrice: currentPrice * (1 + (Math.random() - 0.5) * 0.1),
+              timeframe: "1week",
+              price: currentPrice * (1 + (Math.random() - 0.5) * 0.1),
               confidence: 0.7 + Math.random() * 0.2,
-              signal: stock.changePercent > 0 ? "Buy" : stock.changePercent < -2 ? "Sell" : "Hold",
+              direction: stock.changePercent > 0 ? "up" : stock.changePercent < -2 ? "down" : "neutral",
             },
             {
-              timeframe: "1 month",
-              targetPrice: currentPrice * (1 + (Math.random() - 0.5) * 0.2),
+              timeframe: "1month",
+              price: currentPrice * (1 + (Math.random() - 0.5) * 0.2),
               confidence: 0.6 + Math.random() * 0.2,
-              signal: volatility < 0.02 ? "Buy" : volatility > 0.05 ? "Sell" : "Hold",
+              direction: volatility < 0.02 ? "up" : volatility > 0.05 ? "down" : "neutral",
             },
             {
-              timeframe: "3 months",
-              targetPrice: currentPrice * (1 + (Math.random() - 0.5) * 0.3),
+              timeframe: "3month",
+              price: currentPrice * (1 + (Math.random() - 0.5) * 0.3),
               confidence: 0.5 + Math.random() * 0.2,
-              signal: "Hold",
+              direction: "neutral",
             },
           ],
-          lastUpdated: new Date().toISOString(),
-          modelAccuracy: 0.72 + Math.random() * 0.15,
+          signal: stock.changePercent > 0 ? "BUY" : stock.changePercent < -2 ? "SELL" : "HOLD",
+          keyFactors: [],
+          riskLevel: "Medium",
         })
       }
 
@@ -358,8 +381,8 @@ class RealDataService {
   async getPortfolio(): Promise<Portfolio> {
     // This would typically come from user's brokerage account
     const mockHoldings = [
-      { symbol: "AAPL", shares: 10, avgCost: 150, currentPrice: 0, marketValue: 0, gainLoss: 0, gainLossPercent: 0 },
-      { symbol: "GOOGL", shares: 5, avgCost: 200, currentPrice: 0, marketValue: 0, gainLoss: 0, gainLossPercent: 0 },
+      { symbol: "AAPL", name: "Apple Inc.", shares: 10, avgCost: 150, currentPrice: 0, marketValue: 0, gainLoss: 0, gainLossPercent: 0 },
+      { symbol: "GOOGL", name: "Alphabet Inc.", shares: 5, avgCost: 200, currentPrice: 0, marketValue: 0, gainLoss: 0, gainLossPercent: 0 },
     ]
 
     // Update with real prices
@@ -390,9 +413,10 @@ class RealDataService {
 
     return {
       totalValue,
+      dayChange: 0,
+      dayChangePercent: 0,
       totalGainLoss,
       totalGainLossPercent,
-      cashBalance: 5000,
       holdings: updatedHoldings,
     }
   }
@@ -403,10 +427,10 @@ class RealDataService {
     const avgSentiment = news.reduce((sum, item) => sum + item.sentiment, 0) / news.length || 0.5
 
     return {
-      overall: { score: avgSentiment, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
-      news: { score: avgSentiment, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
-      social: { score: avgSentiment * 0.9, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
-      analyst: { score: avgSentiment * 1.1, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
+      overall: { score: avgSentiment, label: "Overall", change: 0, sources: 1 },
+      news: { score: avgSentiment, label: "News", articles: 1, topSources: [] },
+      social: { score: avgSentiment * 0.9, label: "Social", mentions: 1, platforms: [] },
+      analyst: { score: avgSentiment * 1.1, label: "Analyst", reports: 1, upgrades: 0, downgrades: 0 },
     }
   }
 
@@ -416,22 +440,28 @@ class RealDataService {
 
     if (!stock) {
       return {
+        overallRisk: "Medium",
+        riskScore: 5,
         volatility: 20,
         beta: 1,
-        sharpeRatio: 0.5,
         maxDrawdown: 15,
-        var95: 5,
-        riskScore: 5,
+        sharpeRatio: 0.5,
+        valueAtRisk: 5,
+        expectedShortfall: 2,
+        correlationSP500: 0.8,
       }
     }
 
     return {
-      volatility: Math.abs(stock.changePercent) * 5, // Approximate volatility
-      beta: fundamentals.beta || 1,
-      sharpeRatio: 0.3 + Math.random() * 0.7,
-      maxDrawdown: Math.abs(stock.changePercent) * 3,
-      var95: Math.abs(stock.changePercent) * 2,
+      overallRisk: "Medium",
       riskScore: Math.min(10, Math.max(1, Math.abs(stock.changePercent) * 2)),
+      volatility: Math.abs(stock.changePercent) * 5,
+      beta: 1,
+      maxDrawdown: Math.abs(stock.changePercent) * 3,
+      sharpeRatio: 0.3 + Math.random() * 0.7,
+      valueAtRisk: Math.abs(stock.changePercent) * 2,
+      expectedShortfall: Math.abs(stock.changePercent),
+      correlationSP500: 0.8,
     }
   }
 

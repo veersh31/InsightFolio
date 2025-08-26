@@ -30,20 +30,20 @@ export function StockSearch({ onStockSelect }: StockSearchProps) {
       setIsSearching(true)
       try {
         const searchTermUpper = searchTerm.toUpperCase()
-        console.log(`[v0] Searching for symbol: ${searchTermUpper}`)
+  console.log(`[InsightFolio] Searching for symbol: ${searchTermUpper}`)
 
         const stockData = await dataService.getStock(searchTermUpper)
         if (stockData) {
-          console.log(`[v0] Found stock data for ${searchTermUpper}: $${stockData.price}`)
+          console.log(`[InsightFolio] Found stock data for ${searchTermUpper}: $${stockData.price}`)
           setSearchResults([stockData])
         } else {
-          console.log(`[v0] No data found for ${searchTermUpper}`)
+          console.log(`[InsightFolio] No data found for ${searchTermUpper}`)
           setSearchResults([])
         }
 
         setShowResults(true)
       } catch (error) {
-        console.error("[v0] Search error:", error)
+  console.error("[InsightFolio] Search error:", error)
         setSearchResults([])
       } finally {
         setIsSearching(false)

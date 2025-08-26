@@ -1,6 +1,7 @@
 import type {
   Stock,
   Portfolio,
+  PortfolioHolding,
   MLPrediction,
   TechnicalIndicator,
   NewsItem,
@@ -10,7 +11,6 @@ import type {
   FundamentalData,
 } from "./types"
 
-// API Configuration
 const POLYGON_API_KEY = "ZGg7pgHcHAPTGyXXSGppa1jzHxcpCH48"
 const ALPHA_VANTAGE_API_KEY = "C3L12YWVE5QQ38OH"
 
@@ -40,11 +40,10 @@ class RealDataService {
     try {
       let stockData: Stock | null = null
 
-      // Try Alpha Vantage first (more reliable for basic quotes)
       try {
         console.log(`[v0] Trying Alpha Vantage for ${symbol}`)
         const avResponse = await fetch(
-          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`,
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
         )
         const avData = await avResponse.json()
 
@@ -58,18 +57,21 @@ class RealDataService {
           const changePercent = Number.parseFloat(quote["10. change percent"].replace("%", ""))
           const volume = Number.parseInt(quote["06. volume"]) || 0
 
-          // Get company name from overview
           let companyName = symbol
+          let marketCap = 0
           try {
             const overviewResponse = await fetch(
-              `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`,
+              `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
             )
             const overviewData = await overviewResponse.json()
             if (overviewData.Name) {
               companyName = overviewData.Name
             }
+            if (overviewData.MarketCapitalization) {
+              marketCap = Number.parseFloat(overviewData.MarketCapitalization) || 0
+            }
           } catch (e) {
-            console.log(`[v0] Company name lookup failed for ${symbol}`)
+            console.log(`[v0] Company name/market cap lookup failed for ${symbol}`)
           }
 
           stockData = {
@@ -79,7 +81,7 @@ class RealDataService {
             change: change,
             changePercent: changePercent,
             volume: volume,
-            marketCap: 0, // Will be populated later if needed
+            marketCap,
             peRatio: 0,
             high52Week: currentPrice * 1.2,
             low52Week: currentPrice * 0.8,
@@ -95,13 +97,11 @@ class RealDataService {
         console.log(`[v0] Alpha Vantage failed for ${symbol}:`, error)
       }
 
-      // If Alpha Vantage failed, try Polygon as backup
       if (!stockData) {
         try {
           console.log(`[v0] Trying Polygon for ${symbol}`)
-          // Get previous day's data (more reliable than current day)
           const prevResponse = await fetch(
-            `https://api.polygon.io/v2/aggs/ticker/${symbol}/prev?adjusted=true&apikey=${POLYGON_API_KEY}`,
+            `https://api.polygon.io/v2/aggs/ticker/${symbol}/prev?adjusted=true&apikey=${POLYGON_API_KEY}`
           )
           const prevData = await prevResponse.json()
 
@@ -109,15 +109,15 @@ class RealDataService {
 
           if (prevData.results && prevData.results.length > 0) {
             const result = prevData.results[0]
-            const currentPrice = result.c // Close price
-            const openPrice = result.o // Open price
+            const currentPrice = result.c
+            const openPrice = result.o
             const change = currentPrice - openPrice
             const changePercent = openPrice > 0 ? (change / openPrice) * 100 : 0
             const volume = result.v || 0
 
             stockData = {
               symbol: symbol.toUpperCase(),
-              name: symbol, // Will try to get company name separately
+              name: symbol,
               price: currentPrice,
               change: change,
               changePercent: changePercent,
@@ -137,69 +137,20 @@ class RealDataService {
         }
       }
 
-      // If both APIs failed, create a fallback with realistic mock data
-      if (!stockData) {
-        console.log(`[v0] Both APIs failed for ${symbol}, using fallback data`)
-
-        // Create realistic fallback data based on known stock prices
-        const fallbackPrices: { [key: string]: number } = {
-          AAPL: 227.16,
-          GOOGL: 208.49,
-          NVDA: 179.81,
-          META: 753.3,
-          MSFT: 378.92,
-          TSLA: 245.78,
-          AMZN: 3456.78,
-          PLTR: 157.17,
-          A: 119.15,
-        }
-
-        const fallbackNames: { [key: string]: string } = {
-          AAPL: "Apple Inc.",
-          GOOGL: "Alphabet Inc.",
-          NVDA: "NVIDIA Corporation",
-          META: "Meta Platforms Inc.",
-          MSFT: "Microsoft Corporation",
-          TSLA: "Tesla Inc.",
-          AMZN: "Amazon.com Inc.",
-          PLTR: "Palantir Technologies Inc.",
-          A: "Agilent Technologies Inc.",
-        }
-
-        const basePrice = fallbackPrices[symbol.toUpperCase()] || 100 + Math.random() * 200
-        const changePercent = (Math.random() - 0.5) * 6 // -3% to +3%
-        const change = basePrice * (changePercent / 100)
-
-        stockData = {
-          symbol: symbol.toUpperCase(),
-          name: fallbackNames[symbol.toUpperCase()] || `${symbol.toUpperCase()} Corporation`,
-          price: basePrice,
-          change: change,
-          changePercent: changePercent,
-          volume: Math.floor(Math.random() * 10000000) + 1000000,
-          marketCap: basePrice * 1000000000,
-          peRatio: 15 + Math.random() * 20,
-          high52Week: basePrice * 1.3,
-          low52Week: basePrice * 0.7,
-        }
-
-        console.log(`[v0] Using fallback data for ${symbol}: $${basePrice.toFixed(2)}`)
-      }
 
       if (stockData) {
-        this.setCachedData(cacheKey, stockData, 60000) // 1 minute cache
+  this.setCachedData(cacheKey, stockData, 60000)
         return stockData
       }
 
-      console.error(`[v0] No data found for symbol: ${symbol} from any API`)
-      return null
+  console.error(`[v0] No data found for symbol: ${symbol} from any API`)
+  return null
     } catch (error) {
       console.error(`[v0] Error fetching stock data for ${symbol}:`, error)
       return null
     }
   }
 
-  // Fetch multiple stocks with real data
   async getStocks(symbols?: string[]): Promise<Stock[]> {
     const stockSymbols = symbols || ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN", "NVDA", "META"]
     const stocks: Stock[] = []
@@ -214,7 +165,6 @@ class RealDataService {
     return stocks
   }
 
-  // Get real technical indicators from Alpha Vantage
   async getTechnicalIndicators(symbol: string): Promise<TechnicalIndicator[]> {
     const cacheKey = `technical_${symbol}`
     const cached = this.getCachedData<TechnicalIndicator[]>(cacheKey)
@@ -223,9 +173,8 @@ class RealDataService {
     try {
       const indicators: TechnicalIndicator[] = []
 
-      // Get RSI
       const rsiResponse = await fetch(
-        `https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`,
+        `https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`
       )
       const rsiData = await rsiResponse.json()
 
@@ -235,14 +184,13 @@ class RealDataService {
           name: "RSI (14)",
           value: Number.parseFloat(latestRSI.RSI),
           signal:
-            Number.parseFloat(latestRSI.RSI) > 70 ? "Sell" : Number.parseFloat(latestRSI.RSI) < 30 ? "Buy" : "Hold",
+            Number.parseFloat(latestRSI.RSI) > 70 ? "Bearish" : Number.parseFloat(latestRSI.RSI) < 30 ? "Bullish" : "Neutral",
           description: "Relative Strength Index - momentum oscillator",
         })
       }
 
-      // Get MACD
       const macdResponse = await fetch(
-        `https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`,
+        `https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`
       )
       const macdData = await macdResponse.json()
 
@@ -254,14 +202,13 @@ class RealDataService {
         indicators.push({
           name: "MACD",
           value: macdValue,
-          signal: macdValue > signalValue ? "Buy" : "Sell",
+          signal: macdValue > signalValue ? "Bullish" : "Bearish",
           description: "Moving Average Convergence Divergence",
         })
       }
 
-      // Get Moving Averages
       const sma20Response = await fetch(
-        `https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`,
+        `https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`
       )
       const sma20Data = await sma20Response.json()
 
@@ -270,12 +217,12 @@ class RealDataService {
         indicators.push({
           name: "SMA (20)",
           value: Number.parseFloat(latestSMA20.SMA),
-          signal: "Hold",
+          signal: "Neutral",
           description: "20-day Simple Moving Average",
         })
       }
 
-      this.setCachedData(cacheKey, indicators, 300000) // 5 minute cache
+  this.setCachedData(cacheKey, indicators, 300000)
       return indicators
     } catch (error) {
       console.error(`Error fetching technical indicators for ${symbol}:`, error)
@@ -283,7 +230,6 @@ class RealDataService {
     }
   }
 
-  // Get real news from Alpha Vantage
   async getNews(symbol?: string, limit = 10): Promise<NewsItem[]> {
     const cacheKey = symbol ? `news_${symbol}_${limit}` : `news_all_${limit}`
     const cached = this.getCachedData<NewsItem[]>(cacheKey)
@@ -291,7 +237,7 @@ class RealDataService {
 
     try {
       const newsResponse = await fetch(
-        `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${symbol || "AAPL,GOOGL,MSFT"}&apikey=${ALPHA_VANTAGE_API_KEY}`,
+        `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${symbol || "AAPL,GOOGL,MSFT"}&apikey=${ALPHA_VANTAGE_API_KEY}`
       )
       const newsData = await newsResponse.json()
 
@@ -313,7 +259,7 @@ class RealDataService {
               : "Low",
       }))
 
-      this.setCachedData(cacheKey, news, 300000) // 5 minute cache
+  this.setCachedData(cacheKey, news, 300000)
       return news
     } catch (error) {
       console.error(`Error fetching news:`, error)
@@ -321,19 +267,18 @@ class RealDataService {
     }
   }
 
-  // Get real market indices from Alpha Vantage
   async getMarketIndices(): Promise<MarketIndex[]> {
     const cacheKey = "market_indices"
     const cached = this.getCachedData<MarketIndex[]>(cacheKey)
     if (cached) return cached
 
     try {
-      const indices = ["SPY", "QQQ", "DIA"] // ETFs representing major indices
+  const indices = ["SPY", "QQQ", "DIA"]
       const marketData: MarketIndex[] = []
 
       for (const symbol of indices) {
         const response = await fetch(
-          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`,
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
         )
         const data = await response.json()
 
@@ -351,7 +296,7 @@ class RealDataService {
         }
       }
 
-      this.setCachedData(cacheKey, marketData, 300000) // 5 minute cache
+  this.setCachedData(cacheKey, marketData, 300000)
       return marketData
     } catch (error) {
       console.error("Error fetching market indices:", error)
@@ -359,7 +304,6 @@ class RealDataService {
     }
   }
 
-  // Get real fundamental data from Alpha Vantage
   async getFundamentalData(symbol: string): Promise<FundamentalData> {
     const cacheKey = `fundamental_${symbol}`
     const cached = this.getCachedData<FundamentalData>(cacheKey)
@@ -367,7 +311,7 @@ class RealDataService {
 
     try {
       const overviewResponse = await fetch(
-        `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`,
+        `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
       )
       const overviewData = await overviewResponse.json()
 
@@ -376,57 +320,39 @@ class RealDataService {
         peRatio: Number.parseFloat(overviewData.PERatio) || 0,
         pegRatio: Number.parseFloat(overviewData.PEGRatio) || 0,
         priceToBook: Number.parseFloat(overviewData.PriceToBookRatio) || 0,
+        priceToSales: Number.parseFloat(overviewData.PriceToSalesRatio) || 0,
         debtToEquity: Number.parseFloat(overviewData.DebtToEquityRatio) || 0,
-        roe: Number.parseFloat(overviewData.ReturnOnEquityTTM) || 0,
-        roa: Number.parseFloat(overviewData.ReturnOnAssetsTTM) || 0,
-        grossMargin: Number.parseFloat(overviewData.GrossProfitTTM) || 0,
-        operatingMargin: Number.parseFloat(overviewData.OperatingMarginTTM) || 0,
+        currentRatio: Number.parseFloat(overviewData.CurrentRatio) || 0,
+        quickRatio: Number.parseFloat(overviewData.QuickRatio) || 0,
+        returnOnEquity: Number.parseFloat(overviewData.ReturnOnEquityTTM) || 0,
+        returnOnAssets: Number.parseFloat(overviewData.ReturnOnAssetsTTM) || 0,
         profitMargin: Number.parseFloat(overviewData.ProfitMargin) || 0,
-        revenue: Number.parseFloat(overviewData.RevenueTTM) || 0,
-        revenueGrowth: Number.parseFloat(overviewData.QuarterlyRevenueGrowthYOY) || 0,
-        earningsGrowth: Number.parseFloat(overviewData.QuarterlyEarningsGrowthYOY) || 0,
-        dividendYield: Number.parseFloat(overviewData.DividendYield) || 0,
-        payoutRatio: Number.parseFloat(overviewData.PayoutRatio) || 0,
-        beta: Number.parseFloat(overviewData.Beta) || 1,
-        eps: Number.parseFloat(overviewData.EPS) || 0,
-        bookValue: Number.parseFloat(overviewData.BookValue) || 0,
-        cashPerShare: 0, // Not available in overview
-        currentRatio: 0, // Not available in overview
-        quickRatio: 0, // Not available in overview
+        operatingMargin: Number.parseFloat(overviewData.OperatingMarginTTM) || 0,
+  earningsData: [],
       }
 
-      this.setCachedData(cacheKey, fundamentalData, 3600000) // 1 hour cache
+  this.setCachedData(cacheKey, fundamentalData, 3600000)
       return fundamentalData
     } catch (error) {
       console.error(`Error fetching fundamental data for ${symbol}:`, error)
-      // Return default values on error
       return {
         marketCap: 0,
         peRatio: 0,
         pegRatio: 0,
         priceToBook: 0,
+        priceToSales: 0,
         debtToEquity: 0,
-        roe: 0,
-        roa: 0,
-        grossMargin: 0,
-        operatingMargin: 0,
-        profitMargin: 0,
-        revenue: 0,
-        revenueGrowth: 0,
-        earningsGrowth: 0,
-        dividendYield: 0,
-        payoutRatio: 0,
-        beta: 1,
-        eps: 0,
-        bookValue: 0,
-        cashPerShare: 0,
         currentRatio: 0,
         quickRatio: 0,
+        returnOnEquity: 0,
+        returnOnAssets: 0,
+        profitMargin: 0,
+        operatingMargin: 0,
+        earningsData: [],
       }
     }
   }
 
-  // Generate ML predictions based on real data
   async getMLPredictions(symbol?: string): Promise<MLPrediction[]> {
     const cacheKey = symbol ? `ml_predictions_${symbol}` : "ml_predictions_all"
     const cached = this.getCachedData<MLPrediction[]>(cacheKey)
@@ -440,38 +366,39 @@ class RealDataService {
         const stock = await this.getStock(sym)
         if (!stock) continue
 
-        // Generate predictions based on current price and technical indicators
         const currentPrice = stock.price
         const volatility = Math.abs(stock.changePercent) / 100
 
         predictions.push({
           symbol: sym,
+          currentPrice,
           predictions: [
             {
-              timeframe: "1 week",
-              targetPrice: currentPrice * (1 + (Math.random() - 0.5) * 0.1),
+              timeframe: "1week",
+              price: currentPrice * (1 + (Math.random() - 0.5) * 0.1),
               confidence: 0.7 + Math.random() * 0.2,
-              signal: stock.changePercent > 0 ? "Buy" : stock.changePercent < -2 ? "Sell" : "Hold",
+              direction: stock.changePercent > 0 ? "up" : stock.changePercent < -2 ? "down" : "neutral",
             },
             {
-              timeframe: "1 month",
-              targetPrice: currentPrice * (1 + (Math.random() - 0.5) * 0.2),
+              timeframe: "1month",
+              price: currentPrice * (1 + (Math.random() - 0.5) * 0.2),
               confidence: 0.6 + Math.random() * 0.2,
-              signal: volatility < 0.02 ? "Buy" : volatility > 0.05 ? "Sell" : "Hold",
+              direction: volatility < 0.02 ? "up" : volatility > 0.05 ? "down" : "neutral",
             },
             {
-              timeframe: "3 months",
-              targetPrice: currentPrice * (1 + (Math.random() - 0.5) * 0.3),
+              timeframe: "3month",
+              price: currentPrice * (1 + (Math.random() - 0.5) * 0.3),
               confidence: 0.5 + Math.random() * 0.2,
-              signal: "Hold",
+              direction: "neutral",
             },
           ],
-          lastUpdated: new Date().toISOString(),
-          modelAccuracy: 0.72 + Math.random() * 0.15,
+          signal: stock.changePercent > 0 ? "BUY" : stock.changePercent < -2 ? "SELL" : "HOLD",
+          keyFactors: [],
+          riskLevel: volatility < 0.02 ? "Low" : volatility > 0.05 ? "High" : "Medium",
         })
       }
 
-      this.setCachedData(cacheKey, predictions, 1800000) // 30 minute cache
+  this.setCachedData(cacheKey, predictions, 1800000)
       return predictions
     } catch (error) {
       console.error("Error generating ML predictions:", error)
@@ -479,59 +406,52 @@ class RealDataService {
     }
   }
 
-  // Mock implementations for features not available in free APIs
   async getPortfolio(): Promise<Portfolio> {
-    // This would typically come from user's brokerage account
-    const mockHoldings = [
-      { symbol: "AAPL", shares: 10, avgCost: 150, currentPrice: 0, marketValue: 0, gainLoss: 0, gainLossPercent: 0 },
-      { symbol: "GOOGL", shares: 5, avgCost: 200, currentPrice: 0, marketValue: 0, gainLoss: 0, gainLossPercent: 0 },
-    ]
-
-    // Update with real prices
-    const updatedHoldings = await Promise.all(
-      mockHoldings.map(async (holding) => {
-        const stock = await this.getStock(holding.symbol)
-        if (stock) {
-          const marketValue = holding.shares * stock.price
-          const gainLoss = marketValue - holding.shares * holding.avgCost
-          const gainLossPercent = (gainLoss / (holding.shares * holding.avgCost)) * 100
-
-          return {
-            ...holding,
-            currentPrice: stock.price,
-            marketValue,
-            gainLoss,
-            gainLossPercent,
-          }
-        }
-        return holding
-      }),
-    )
-
-    const totalValue = updatedHoldings.reduce((sum, holding) => sum + holding.marketValue, 0)
-    const totalCost = updatedHoldings.reduce((sum, holding) => sum + holding.shares * holding.avgCost, 0)
+    const symbols = ["AAPL", "GOOGL"]
+    const holdings: PortfolioHolding[] = []
+    for (const symbol of symbols) {
+      const stock = await this.getStock(symbol)
+      if (stock) {
+        const shares = symbol === "AAPL" ? 10 : 5
+        const avgCost = symbol === "AAPL" ? 150 : 200
+        const marketValue = shares * stock.price
+        const gainLoss = marketValue - shares * avgCost
+        const gainLossPercent = (gainLoss / (shares * avgCost)) * 100
+        holdings.push({
+          symbol,
+          name: stock.name,
+          shares,
+          avgCost,
+          currentPrice: stock.price,
+          marketValue,
+          gainLoss,
+          gainLossPercent,
+        })
+      }
+    }
+    const totalValue = holdings.reduce((sum, holding) => sum + holding.marketValue, 0)
+    const totalCost = holdings.reduce((sum, holding) => sum + holding.shares * holding.avgCost, 0)
     const totalGainLoss = totalValue - totalCost
     const totalGainLossPercent = (totalGainLoss / totalCost) * 100
-
     return {
       totalValue,
+      dayChange: 0,
+      dayChangePercent: 0,
       totalGainLoss,
       totalGainLossPercent,
-      cashBalance: 5000,
-      holdings: updatedHoldings,
+      holdings,
     }
   }
 
   async getSentimentData(symbol: string): Promise<SentimentData> {
-    // Use news sentiment as proxy
     const news = await this.getNews(symbol, 20)
     const avgSentiment = news.reduce((sum, item) => sum + item.sentiment, 0) / news.length || 0.5
 
     return {
-      overall: { score: avgSentiment, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
-      news: { score: avgSentiment, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
-      social: { score: avgSentiment * 0.9, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
-      analyst: { score: avgSentiment * 1.1, trend: avgSentiment > 0.5 ? "Positive" : "Negative" },
+      overall: { score: avgSentiment, label: "Overall", change: 0, sources: 1 },
+      news: { score: avgSentiment, label: "News", articles: news.length, topSources: [] },
+      social: { score: avgSentiment * 0.9, label: "Social", mentions: 0, platforms: [] },
+      analyst: { score: avgSentiment * 1.1, label: "Analyst", reports: 0, upgrades: 0, downgrades: 0 },
     }
   }
 
@@ -541,31 +461,35 @@ class RealDataService {
 
     if (!stock) {
       return {
+        overallRisk: "Medium",
+        riskScore: 5,
         volatility: 20,
         beta: 1,
-        sharpeRatio: 0.5,
         maxDrawdown: 15,
-        var95: 5,
-        riskScore: 5,
+        sharpeRatio: 0.5,
+        valueAtRisk: 5,
+        expectedShortfall: 2,
+        correlationSP500: 0.8,
       }
     }
-
     return {
-      volatility: Math.abs(stock.changePercent) * 5, // Approximate volatility
-      beta: fundamentals.beta || 1,
-      sharpeRatio: 0.3 + Math.random() * 0.7,
-      maxDrawdown: Math.abs(stock.changePercent) * 3,
-      var95: Math.abs(stock.changePercent) * 2,
+      overallRisk: "Medium",
       riskScore: Math.min(10, Math.max(1, Math.abs(stock.changePercent) * 2)),
+      volatility: Math.abs(stock.changePercent) * 5,
+      beta: stock.beta || 1,
+      maxDrawdown: Math.abs(stock.changePercent) * 3,
+      sharpeRatio: 0.3 + Math.random() * 0.7,
+      valueAtRisk: Math.abs(stock.changePercent) * 2,
+      expectedShortfall: Math.abs(stock.changePercent),
+      correlationSP500: 0.8,
     }
   }
 
-  // Real-time data simulation with actual API calls
   subscribeToRealTimeData(symbols: string[], callback: (data: Stock[]) => void): () => void {
     const interval = setInterval(async () => {
       const stocks = await this.getStocks(symbols)
       callback(stocks)
-    }, 60000) // Update every minute to respect API limits
+  }, 60000)
 
     return () => clearInterval(interval)
   }
