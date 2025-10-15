@@ -1,16 +1,120 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Activity, TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { realDataService } from "@/lib/real-data-service"
+import { TechnicalIndicator } from "@/lib/types"
 
-export function TechnicalIndicators() {
-  const indicators = [
-    { name: "RSI (14)", value: 68.5, signal: "Neutral", description: "Relative Strength Index" },
-    { name: "MACD", value: 2.34, signal: "Bullish", description: "Moving Average Convergence Divergence" },
-    { name: "SMA (50)", value: 172.45, signal: "Bullish", description: "50-day Simple Moving Average" },
-    { name: "SMA (200)", value: 165.78, signal: "Bullish", description: "200-day Simple Moving Average" },
-    { name: "Bollinger Bands", value: 0.75, signal: "Neutral", description: "Price relative to bands" },
-    { name: "Volume", value: 1.2, signal: "High", description: "Relative to average volume" },
-  ]
+interface TechnicalIndicatorsProps {
+  selectedStock?: string | null
+}
+
+export function TechnicalIndicators({ selectedStock }: TechnicalIndicatorsProps) {
+  const [indicators, setIndicators] = useState<TechnicalIndicator[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedStock) {
+      setIndicators([])
+      return
+    }
+
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await realDataService.getTechnicalIndicators(selectedStock)
+        setIndicators(data)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch technical indicators')
+        console.error('Error fetching technical indicators:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [selectedStock])
+
+  if (!selectedStock) {
+    return (
+      <Card>
+        <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="h-5 w-5" />
+          Technical Indicators
+        </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Select a stock to view technical indicators
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Technical Indicators - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading technical indicators...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Technical Indicators - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <p className="text-red-600 mb-2">Error loading technical indicators</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!indicators || indicators.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Technical Indicators - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No technical indicators available</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+  // Use real data from the API
 
   const getSignalColor = (signal: string) => {
     switch (signal.toLowerCase()) {
@@ -47,7 +151,7 @@ export function TechnicalIndicators() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className="h-5 w-5" />
-          Technical Indicators - AAPL
+          Technical Indicators - {selectedStock}
         </CardTitle>
       </CardHeader>
       <CardContent>

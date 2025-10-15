@@ -2,66 +2,133 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { MessageSquare, TrendingUp, TrendingDown, Newspaper, Twitter, Users } from "lucide-react"
+import { useState, useEffect } from "react"
+import { realDataService } from "@/lib/real-data-service"
+import { SentimentData, NewsItem } from "@/lib/types"
 
-export function SentimentAnalysis() {
-  const sentimentData = {
-    overall: {
-      score: 0.72,
-      label: "Bullish",
-      change: 0.08,
-      sources: 1247,
-    },
-    news: {
-      score: 0.68,
-      label: "Positive",
-      articles: 156,
-      topSources: ["Reuters", "Bloomberg", "CNBC"],
-    },
-    social: {
-      score: 0.76,
-      label: "Very Positive",
-      mentions: 8924,
-      platforms: ["Twitter", "Reddit", "StockTwits"],
-    },
-    analyst: {
-      score: 0.71,
-      label: "Positive",
-      reports: 23,
-      upgrades: 8,
-      downgrades: 2,
-    },
+interface SentimentAnalysisProps {
+  selectedStock?: string | null
+}
+
+export function SentimentAnalysis({ selectedStock }: SentimentAnalysisProps) {
+  const [sentimentData, setSentimentData] = useState<SentimentData | null>(null)
+  const [newsData, setNewsData] = useState<NewsItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedStock) {
+      setSentimentData(null)
+      setNewsData([])
+      return
+    }
+
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const [sentiment, news] = await Promise.all([
+          realDataService.getSentimentData(selectedStock),
+          realDataService.getNews(selectedStock, 10)
+        ])
+        setSentimentData(sentiment)
+        setNewsData(news)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch sentiment data')
+        console.error('Error fetching sentiment data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [selectedStock])
+
+  if (!selectedStock) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Sentiment Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Select a stock to view sentiment analysis
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
-  const recentNews = [
-    {
-      title: "Apple Reports Strong Q3 Earnings, Beats Expectations",
-      source: "Reuters",
-      sentiment: 0.85,
-      time: "2 hours ago",
-      impact: "High",
-    },
-    {
-      title: "iPhone 15 Sales Exceed Analyst Projections",
-      source: "Bloomberg",
-      sentiment: 0.78,
-      time: "4 hours ago",
-      impact: "Medium",
-    },
-    {
-      title: "Apple Services Revenue Continues Growth Trajectory",
-      source: "CNBC",
-      sentiment: 0.72,
-      time: "6 hours ago",
-      impact: "Medium",
-    },
-    {
-      title: "Concerns Over China Market Headwinds",
-      source: "Financial Times",
-      sentiment: 0.35,
-      time: "8 hours ago",
-      impact: "Medium",
-    },
-  ]
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Sentiment Analysis - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading sentiment data...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Sentiment Analysis - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <p className="text-red-600 mb-2">Error loading sentiment data</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!sentimentData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Sentiment Analysis - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No sentiment data available</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+  // Use real data from the API
+  const recentNews = newsData.map(news => ({
+    title: news.title,
+    source: news.source,
+    sentiment: news.sentiment,
+    time: news.time,
+    impact: news.impact,
+  }))
 
   const getSentimentColor = (score: number) => {
     if (score >= 0.7) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
@@ -93,7 +160,7 @@ export function SentimentAnalysis() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
-          Sentiment Analysis - AAPL
+          Sentiment Analysis - {selectedStock}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

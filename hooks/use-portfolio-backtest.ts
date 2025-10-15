@@ -42,21 +42,37 @@ export function usePortfolioBacktest(portfolio: { symbol: string; shares: string
           setLoading(false)
           return
         }
-        if (!allPrices.length || !allPrices[0].prices.length) {
-          setError("No historical price data found for the selected date range.")
+        
+        // Check if we have any valid price data
+        const validPrices = allPrices.filter(p => p.prices && p.prices.length > 0)
+        if (validPrices.length === 0) {
+          setError("No historical price data found for the selected date range. Please try a different date range or check if the stocks are valid.")
           setResult(null)
           setLoading(false)
           return
         }
-        // Assume all prices arrays have the same dates
-        const dates = allPrices[0]?.prices.map((p: any) => p.date) || []
+        
+        // If some stocks have data but others don't, continue with available data
+        const stocksWithData = validPrices.map(p => p.symbol)
+        const stocksWithoutData = portfolio.filter(p => !stocksWithData.includes(p.symbol))
+        
+        if (stocksWithoutData.length > 0) {
+          console.warn(`No data available for: ${stocksWithoutData.map(s => s.symbol).join(', ')}. Continuing with available data.`)
+        }
+        // Use the first stock with data as reference for dates
+        const referencePrices = validPrices[0]
+        const dates = referencePrices.prices.map((p: any) => p.date)
         const portfolioValues: number[] = []
+        
         for (let i = 0; i < dates.length; i++) {
           let value = 0
           for (const holding of portfolio) {
-            const symbolPrices = allPrices.find((p) => p.symbol === holding.symbol)?.prices
-            if (symbolPrices && symbolPrices[i]) {
-              value += parseFloat(holding.shares) * symbolPrices[i].close
+            // Only include stocks that have data
+            if (stocksWithData.includes(holding.symbol)) {
+              const symbolPrices = allPrices.find((p) => p.symbol === holding.symbol)?.prices
+              if (symbolPrices && symbolPrices[i]) {
+                value += parseFloat(holding.shares) * symbolPrices[i].close
+              }
             }
           }
           portfolioValues.push(value)

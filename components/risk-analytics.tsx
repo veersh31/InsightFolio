@@ -2,83 +2,165 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { AlertTriangle, Shield, TrendingDown, BarChart3, Target, Zap } from "lucide-react"
+import { useState, useEffect } from "react"
+import { realDataService } from "@/lib/real-data-service"
+import { RiskMetrics } from "@/lib/types"
 
-export function RiskAnalytics() {
-  const riskMetrics = {
-    overallRisk: "Medium",
-    riskScore: 6.2,
-    volatility: 28.5,
-    beta: 1.34,
-    maxDrawdown: -12.7,
-    sharpeRatio: 1.42,
-    valueAtRisk: -4.2,
-    expectedShortfall: -6.8,
-    correlationSP500: 0.78,
-    liquidityRisk: "Low",
+interface RiskAnalyticsProps {
+  selectedStock?: string | null
+}
+
+export function RiskAnalytics({ selectedStock }: RiskAnalyticsProps) {
+  const [riskMetrics, setRiskMetrics] = useState<RiskMetrics | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedStock) {
+      setRiskMetrics(null)
+      return
+    }
+
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const risk = await realDataService.getRiskMetrics(selectedStock)
+        setRiskMetrics(risk)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch risk data')
+        console.error('Error fetching risk data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [selectedStock])
+
+  if (!selectedStock) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Risk Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Select a stock to view risk analytics
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Risk Analytics - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading risk data...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Risk Analytics - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <p className="text-red-600 mb-2">Error loading risk data</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!riskMetrics) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Risk Analytics - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No risk data available</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+  // Use real data from the API
+
+  // Mock risk factors (this would ideally come from a separate API call)
   const riskFactors = [
     {
       factor: "Market Risk",
-      level: "Medium",
-      score: 6.5,
+      level: riskMetrics.overallRisk,
+      score: riskMetrics.riskScore,
       description: "Exposure to broad market movements",
-      impact: "High correlation with S&P 500",
+      impact: `Correlation with S&P 500: ${(riskMetrics.correlationSP500 * 100).toFixed(1)}%`,
     },
     {
-      factor: "Sector Risk",
-      level: "Medium",
-      score: 5.8,
-      description: "Technology sector concentration",
-      impact: "Dependent on tech sector performance",
+      factor: "Volatility Risk",
+      level: riskMetrics.volatility > 30 ? "High" : riskMetrics.volatility > 20 ? "Medium" : "Low",
+      score: Math.min(10, riskMetrics.volatility / 3),
+      description: "Price volatility risk",
+      impact: `Current volatility: ${riskMetrics.volatility.toFixed(1)}%`,
     },
     {
-      factor: "Company Risk",
-      level: "Low",
-      score: 3.2,
-      description: "Company-specific factors",
-      impact: "Strong fundamentals, diversified revenue",
-    },
-    {
-      factor: "Liquidity Risk",
-      level: "Low",
-      score: 2.1,
-      description: "Ability to trade without price impact",
-      impact: "High trading volume, tight spreads",
-    },
-    {
-      factor: "Currency Risk",
-      level: "Medium",
-      score: 6.0,
-      description: "Foreign exchange exposure",
-      impact: "Significant international revenue",
+      factor: "Drawdown Risk",
+      level: Math.abs(riskMetrics.maxDrawdown) > 20 ? "High" : Math.abs(riskMetrics.maxDrawdown) > 10 ? "Medium" : "Low",
+      score: Math.min(10, Math.abs(riskMetrics.maxDrawdown) / 2),
+      description: "Maximum potential loss",
+      impact: `Max drawdown: ${riskMetrics.maxDrawdown.toFixed(1)}%`,
     },
   ]
 
+  // Mock stress tests (this would ideally come from a separate API call)
   const stressTests = [
     {
-      scenario: "2008 Financial Crisis",
-      impact: -45.2,
-      duration: "18 months",
-      recovery: "24 months",
+      scenario: "Market Crash (-30%)",
+      impact: riskMetrics.maxDrawdown * 1.5,
+      duration: "6 months",
+      recovery: "12 months",
     },
     {
-      scenario: "COVID-19 Pandemic",
-      impact: -23.1,
+      scenario: "Sector Downturn (-20%)",
+      impact: riskMetrics.maxDrawdown,
       duration: "3 months",
       recovery: "6 months",
     },
     {
-      scenario: "Tech Bubble Burst",
-      impact: -52.8,
-      duration: "24 months",
-      recovery: "36 months",
-    },
-    {
-      scenario: "Interest Rate Shock",
-      impact: -18.5,
-      duration: "6 months",
-      recovery: "12 months",
+      scenario: "Volatility Spike",
+      impact: riskMetrics.maxDrawdown * 0.8,
+      duration: "2 months",
+      recovery: "4 months",
     },
   ]
 
@@ -106,7 +188,7 @@ export function RiskAnalytics() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5" />
-          Risk Analytics - AAPL
+          Risk Analytics - {selectedStock}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

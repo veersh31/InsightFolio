@@ -3,32 +3,127 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, Calculator } from "lucide-react"
+import { useState, useEffect } from "react"
+import { realDataService } from "@/lib/real-data-service"
+import { FundamentalData } from "@/lib/types"
 
-export function FundamentalAnalysis() {
-  const fundamentalData = {
-    marketCap: 2.75e12,
-    peRatio: 28.5,
-    pegRatio: 1.8,
-    priceToBook: 45.2,
-    priceToSales: 7.3,
-    debtToEquity: 1.73,
-    currentRatio: 0.94,
-    quickRatio: 0.81,
-    returnOnEquity: 147.4,
-    returnOnAssets: 22.6,
-    profitMargin: 25.3,
-    operatingMargin: 29.8,
+interface FundamentalAnalysisProps {
+  selectedStock?: string | null
+}
+
+export function FundamentalAnalysis({ selectedStock }: FundamentalAnalysisProps) {
+  const [fundamentalData, setFundamentalData] = useState<FundamentalData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedStock) {
+      setFundamentalData(null)
+      return
+    }
+
+    const fetchData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await realDataService.getFundamentalData(selectedStock)
+        setFundamentalData(data)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch fundamental data')
+        console.error('Error fetching fundamental data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [selectedStock])
+
+  if (!selectedStock) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Fundamental Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <Calculator className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Select a stock to view fundamental analysis
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
-  const earningsData = [
-    { quarter: "Q4 2023", eps: 2.18, estimate: 2.1, beat: true, revenue: 119.58, revenueGrowth: 2.1 },
-    { quarter: "Q1 2024", eps: 1.53, estimate: 1.5, beat: true, revenue: 90.75, revenueGrowth: -4.3 },
-    { quarter: "Q2 2024", eps: 1.4, estimate: 1.35, beat: true, revenue: 85.78, revenueGrowth: 4.9 },
-    { quarter: "Q3 2024", eps: 1.64, estimate: 1.6, beat: true, revenue: 94.93, revenueGrowth: 6.1 },
-  ]
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Fundamental Analysis - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading fundamental data...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Fundamental Analysis - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <p className="text-red-600 mb-2">Error loading fundamental data</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!fundamentalData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Fundamental Analysis - {selectedStock}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No fundamental data available</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+  // Use real data from the API
+
+  // Use real data from the API - earnings data would come from fundamentalData.earningsData
+  const earningsData = fundamentalData.earningsData || []
+  
+  // Mock peer comparison data (this would ideally come from a separate API call)
   const peerComparison = [
-    { company: "AAPL", peRatio: 28.5, marketCap: 2750, revenue: 394.3, isTarget: true },
+    { company: selectedStock, peRatio: fundamentalData.peRatio, marketCap: fundamentalData.marketCap / 1e9, revenue: 0, isTarget: true },
     { company: "MSFT", peRatio: 32.1, marketCap: 2890, revenue: 245.1, isTarget: false },
     { company: "GOOGL", peRatio: 24.8, marketCap: 1680, revenue: 307.4, isTarget: false },
     { company: "AMZN", peRatio: 45.2, marketCap: 1520, revenue: 574.8, isTarget: false },
@@ -47,7 +142,7 @@ export function FundamentalAnalysis() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calculator className="h-5 w-5" />
-          Fundamental Analysis - AAPL
+          Fundamental Analysis - {selectedStock}
         </CardTitle>
       </CardHeader>
       <CardContent>

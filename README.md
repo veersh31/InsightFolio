@@ -49,19 +49,33 @@ InsightFolio is a modern, real-time stock analytics dashboard inspired by the be
 	git clone https://github.com/veersh31/MLStock.git
 	cd MLStock
 	```
+
 2. **Install dependencies:**
 	```bash
 	npm install --legacy-peer-deps
 	# or
 	pnpm install
 	```
-3. **Run the dev server:**
+
+3. **Start the historical data server (required for backtesting):**
+	```bash
+	# Install Python dependencies
+	pip install fastapi uvicorn yfinance
+	
+	# Start the server
+	./start-server.sh
+	# or manually:
+	# python -m uvicorn yfinance_api:app --host 127.0.0.1 --port 8000
+	```
+
+4. **Run the dev server:**
 	```bash
 	npm run dev
 	# or
 	pnpm run dev
 	```
-4. **Open [http://localhost:3000](http://localhost:3000) in your browser.**
+
+5. **Open [http://localhost:3000](http://localhost:3000) in your browser.**
 
 ---
 
@@ -75,6 +89,8 @@ AAPL,10,175.50
 TSLA,5,700.00
 GOOGL,2,2800.00
 ```
+
+**Sample CSV file**: Use `sample-portfolio.csv` in the project root as a template.
 
 ---
 

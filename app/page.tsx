@@ -112,21 +112,21 @@ export default function DashboardPage() {
           <TabsContent value="predictions" className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
               <MLPredictions selectedStock={selectedStock} />
-              <PredictionConfidenceChart />
+              <PredictionConfidenceChart selectedStock={selectedStock} />
             </div>
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
-              <FundamentalAnalysis />
-              <TechnicalIndicators />
+              <FundamentalAnalysis selectedStock={selectedStock} />
+              <TechnicalIndicators selectedStock={selectedStock} />
             </div>
           </TabsContent>
 
           <TabsContent value="risk" className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
-              <SentimentAnalysis />
-              <RiskAnalytics />
+              <SentimentAnalysis selectedStock={selectedStock} />
+              <RiskAnalytics selectedStock={selectedStock} />
             </div>
           </TabsContent>
         </Tabs>

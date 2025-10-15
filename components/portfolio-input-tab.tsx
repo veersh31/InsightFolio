@@ -1,75 +1,12 @@
-
 import { useState, ChangeEvent } from "react"
-  // Handle CSV upload
-  const handleCSVUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const text = event.target?.result as string
-      // Simple CSV parse: symbol,shares,avgCost (header row required)
-      const lines = text.split(/\r?\n/).filter(Boolean)
-      if (lines.length < 2) return
-      const header = lines[0].split(",").map(h => h.trim().toLowerCase())
-      const symbolIdx = header.indexOf("symbol")
-      const sharesIdx = header.indexOf("shares")
-      const avgCostIdx = header.indexOf("avgcost")
-      if (symbolIdx === -1 || sharesIdx === -1 || avgCostIdx === -1) return
-      const parsedRows = lines.slice(1).map(line => {
-        const cols = line.split(",")
-        return {
-          symbol: cols[symbolIdx]?.trim() || "",
-          shares: cols[sharesIdx]?.trim() || "",
-          avgCost: cols[avgCostIdx]?.trim() || "",
-        }
-      })
-      setRows(parsedRows)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('portfolioInputRows', JSON.stringify(parsedRows))
-      }
-      onPortfolioChange?.(parsedRows)
-    }
-    reader.readAsText(file)
-  }
-
-type PortfolioRow = { symbol: string; shares: string; avgCost: string }
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, TrendingDown, PlusCircle, BarChart2 } from "lucide-react"
+import { TrendingUp, TrendingDown, PlusCircle, BarChart2, Upload } from "lucide-react"
+
+type PortfolioRow = { symbol: string; shares: string; avgCost: string }
 
 export function PortfolioInputTab({ onPortfolioChange }: { onPortfolioChange?: (portfolio: any) => void }) {
-  // Handle CSV upload
-  const handleCSVUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const text = event.target?.result as string
-      // Simple CSV parse: symbol,shares,avgCost (header row required)
-      const lines = text.split(/\r?\n/).filter(Boolean)
-      if (lines.length < 2) return
-      const header = lines[0].split(",").map(h => h.trim().toLowerCase())
-      const symbolIdx = header.indexOf("symbol")
-      const sharesIdx = header.indexOf("shares")
-      const avgCostIdx = header.indexOf("avgcost")
-      if (symbolIdx === -1 || sharesIdx === -1 || avgCostIdx === -1) return
-      const parsedRows = lines.slice(1).map(line => {
-        const cols = line.split(",")
-        return {
-          symbol: cols[symbolIdx]?.trim() || "",
-          shares: cols[sharesIdx]?.trim() || "",
-          avgCost: cols[avgCostIdx]?.trim() || "",
-        }
-      })
-      setRows(parsedRows)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('portfolioInputRows', JSON.stringify(parsedRows))
-      }
-      onPortfolioChange?.(parsedRows)
-    }
-    reader.readAsText(file)
-  }
   // Load from localStorage if available
   const getInitialRows = (): PortfolioRow[] => {
     if (typeof window !== 'undefined') {
@@ -84,7 +21,75 @@ export function PortfolioInputTab({ onPortfolioChange }: { onPortfolioChange?: (
     }
     return [{ symbol: "", shares: "", avgCost: "" }]
   }
+  
   const [rows, setRows] = useState<PortfolioRow[]>(getInitialRows)
+
+  // Handle CSV upload
+  const handleCSVUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) {
+      console.log("No file selected")
+      return
+    }
+    
+    console.log("Processing CSV file:", file.name)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      console.log("CSV content:", text)
+      
+      // Simple CSV parse: symbol,shares,avgCost (header row required)
+      const lines = text.split(/\r?\n/).filter(Boolean)
+      console.log("CSV lines:", lines)
+      
+      if (lines.length < 2) {
+        console.log("CSV file must have at least 2 lines (header + data)")
+        alert("CSV file must have at least 2 lines (header + data)")
+        return
+      }
+      
+      const header = lines[0].split(",").map(h => h.trim().toLowerCase())
+      console.log("CSV header:", header)
+      
+      const symbolIdx = header.indexOf("symbol")
+      const sharesIdx = header.indexOf("shares")
+      const avgCostIdx = header.indexOf("avgcost")
+      
+      console.log("Column indices:", { symbolIdx, sharesIdx, avgCostIdx })
+      
+      if (symbolIdx === -1 || sharesIdx === -1 || avgCostIdx === -1) {
+        console.log("Missing required columns. Expected: symbol, shares, avgcost")
+        alert("CSV must contain columns: symbol, shares, avgcost")
+        return
+      }
+      
+      const parsedRows = lines.slice(1).map(line => {
+        const cols = line.split(",")
+        return {
+          symbol: cols[symbolIdx]?.trim() || "",
+          shares: cols[sharesIdx]?.trim() || "",
+          avgCost: cols[avgCostIdx]?.trim() || "",
+        }
+      }).filter(row => row.symbol && row.shares && row.avgCost) // Only include rows with all data
+      
+      console.log("Parsed rows:", parsedRows)
+      
+      if (parsedRows.length === 0) {
+        alert("No valid data found in CSV file")
+        return
+      }
+      
+      setRows(parsedRows)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('portfolioInputRows', JSON.stringify(parsedRows))
+      }
+      onPortfolioChange?.(parsedRows)
+      
+      // Reset the file input
+      e.target.value = ""
+    }
+    reader.readAsText(file)
+  }
 
   const handleChange = (idx: number, field: string, value: string) => {
     const updated = rows.map((row: PortfolioRow, i: number) =>
@@ -141,7 +146,10 @@ export function PortfolioInputTab({ onPortfolioChange }: { onPortfolioChange?: (
               onChange={handleCSVUpload}
               className="hidden"
             />
-            <span className="bg-primary/10 border border-primary/20 rounded px-2 py-1 hover:bg-primary/20 transition">Upload CSV</span>
+            <span className="bg-primary/10 border border-primary/20 rounded px-2 py-1 hover:bg-primary/20 transition flex items-center gap-1">
+              <Upload className="h-4 w-4" />
+              Upload CSV
+            </span>
           </label>
         </div>
         <Button variant="secondary" size="sm" onClick={handleAddRow} className="gap-1">
@@ -149,6 +157,17 @@ export function PortfolioInputTab({ onPortfolioChange }: { onPortfolioChange?: (
         </Button>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-semibold text-blue-900 mb-2">CSV Format</h4>
+          <p className="text-sm text-blue-700 mb-2">Your CSV file should have the following format:</p>
+          <div className="bg-white p-2 rounded border font-mono text-sm">
+            symbol,shares,avgCost<br/>
+            AAPL,10,175.50<br/>
+            TSLA,5,700.00<br/>
+            GOOGL,2,2800.00
+          </div>
+        </div>
+        
         <div className="overflow-x-auto rounded-lg border bg-muted/40">
           <table className="min-w-full text-sm">
             <thead>

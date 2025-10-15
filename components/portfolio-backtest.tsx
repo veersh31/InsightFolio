@@ -10,7 +10,13 @@ export function PortfolioBacktest({ portfolio }: { portfolio: { symbol: string; 
   const [startDate, setStartDate] = useState<string>("2022-01-01")
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().slice(0, 10))
   const [run, setRun] = useState(false)
-  const { result, loading, error } = usePortfolioBacktest(portfolio, startDate, endDate)
+  
+  // Only run backtest when run is true
+  const { result, loading, error } = usePortfolioBacktest(
+    run ? portfolio : [], 
+    run ? startDate : "", 
+    run ? endDate : ""
+  )
 
   return (
     <Card className="shadow-lg border-2 border-primary/30">
