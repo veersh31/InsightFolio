@@ -32,12 +32,20 @@ export function StockSearch({ onStockSelect }: StockSearchProps) {
         const searchTermUpper = searchTerm.toUpperCase()
   console.log(`[InsightFolio] Searching for symbol: ${searchTermUpper}`)
 
-        const stockData = await dataService.getStock(searchTermUpper)
-        if (stockData) {
-          console.log(`[InsightFolio] Found stock data for ${searchTermUpper}: $${stockData.price}`)
-          setSearchResults([stockData])
-        } else {
-          console.log(`[InsightFolio] No data found for ${searchTermUpper}`)
+        // Use the server-side API route so requests run server-side (Hides API keys, avoids CORS and rate-limit differences)
+        try {
+          const resp = await fetch(`/api/stocks/${searchTermUpper}`)
+          const json = await resp.json()
+          const stockData = json?.success ? json.data : null
+          if (stockData) {
+            console.log(`[InsightFolio] Found stock data for ${searchTermUpper}: $${stockData.price}`)
+            setSearchResults([stockData])
+          } else {
+            console.log(`[InsightFolio] No data found for ${searchTermUpper}`)
+            setSearchResults([])
+          }
+        } catch (err) {
+          console.error('[InsightFolio] Error fetching stock from API route:', err)
           setSearchResults([])
         }
 
