@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Activity, TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
 import { useState, useEffect } from "react"
-import { realDataService } from "@/lib/real-data-service"
+import { dataService } from "@/lib/data-service"
 import { TechnicalIndicator } from "@/lib/types"
 
 interface TechnicalIndicatorsProps {
@@ -24,7 +24,7 @@ export function TechnicalIndicators({ selectedStock }: TechnicalIndicatorsProps)
       setLoading(true)
       setError(null)
       try {
-        const data = await realDataService.getTechnicalIndicators(selectedStock)
+        const data = await dataService.getTechnicalIndicators(selectedStock)
         setIndicators(data)
       } catch (err: any) {
         setError(err.message || 'Failed to fetch technical indicators')

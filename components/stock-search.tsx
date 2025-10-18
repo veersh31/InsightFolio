@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { dataService } from "@/lib/data-service"
 import type { Stock } from "@/lib/types"
 
 interface StockSearchProps {
@@ -30,12 +29,15 @@ export function StockSearch({ onStockSelect }: StockSearchProps) {
       setIsSearching(true)
       try {
         const searchTermUpper = searchTerm.toUpperCase()
-  console.log(`[InsightFolio] Searching for symbol: ${searchTermUpper}`)
+        console.log(`[InsightFolio] Searching for symbol: ${searchTermUpper}`)
 
-        const stockData = await dataService.getStock(searchTermUpper)
-        if (stockData) {
-          console.log(`[InsightFolio] Found stock data for ${searchTermUpper}: $${stockData.price}`)
-          setSearchResults([stockData])
+        // Use the API route instead of calling dataService directly
+        const response = await fetch(`/api/stocks/${searchTermUpper}`)
+        const result = await response.json()
+
+        if (result.success && result.data) {
+          console.log(`[InsightFolio] Found stock data for ${searchTermUpper}: $${result.data.price}`)
+          setSearchResults([result.data])
         } else {
           console.log(`[InsightFolio] No data found for ${searchTermUpper}`)
           setSearchResults([])
@@ -43,7 +45,7 @@ export function StockSearch({ onStockSelect }: StockSearchProps) {
 
         setShowResults(true)
       } catch (error) {
-  console.error("[InsightFolio] Search error:", error)
+        console.error("[InsightFolio] Search error:", error)
         setSearchResults([])
       } finally {
         setIsSearching(false)

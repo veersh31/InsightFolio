@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import yfinance as yf
+import pandas as pd
 from datetime import datetime
 
 app = FastAPI()
@@ -22,10 +23,15 @@ def get_historical_prices(
     end: str = Query(..., description="End date YYYY-MM-DD")
 ):
     try:
-        data = yf.download(symbol, start=start, end=end)
+        # Download data with auto_adjust=True to get adjusted prices
+        data = yf.download(symbol, start=start, end=end, progress=False, auto_adjust=True)
         if data.empty:
             return {"results": []}
-        
+
+        # Flatten MultiIndex columns if present (yfinance sometimes returns MultiIndex)
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+
         # Handle the case where Close might be a series or single value
         results = []
         for idx, row in data.iterrows():
@@ -37,12 +43,12 @@ def get_historical_prices(
             else:
                 # It's already a scalar
                 close_float = float(close_value)
-            
+
             results.append({
-                "date": idx.strftime("%Y-%m-%d"), 
+                "date": idx.strftime("%Y-%m-%d"),
                 "close": close_float
             })
-        
+
         return {"results": results}
     except Exception as e:
         return {"error": str(e)}

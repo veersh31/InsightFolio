@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts"
 import { TrendingUp } from "lucide-react"
 import { useState, useEffect } from "react"
-import { realDataService } from "@/lib/real-data-service"
+import { dataService } from "@/lib/data-service"
 
 interface PredictionConfidenceChartProps {
   selectedStock?: string | null
@@ -23,7 +23,7 @@ export function PredictionConfidenceChart({ selectedStock }: PredictionConfidenc
     const generateConfidenceData = async () => {
       setLoading(true)
       try {
-        const stock = await realDataService.getStock(selectedStock)
+        const stock = await dataService.getStock(selectedStock)
         if (!stock) {
           setConfidenceData([])
           return

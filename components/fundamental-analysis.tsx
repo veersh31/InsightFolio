@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, Calculator } from "lucide-react"
 import { useState, useEffect } from "react"
-import { realDataService } from "@/lib/real-data-service"
+import { dataService } from "@/lib/data-service"
 import { FundamentalData } from "@/lib/types"
 
 interface FundamentalAnalysisProps {
@@ -26,7 +26,7 @@ export function FundamentalAnalysis({ selectedStock }: FundamentalAnalysisProps)
       setLoading(true)
       setError(null)
       try {
-        const data = await realDataService.getFundamentalData(selectedStock)
+        const data = await dataService.getFundamentalData(selectedStock)
         setFundamentalData(data)
       } catch (err: any) {
         setError(err.message || 'Failed to fetch fundamental data')

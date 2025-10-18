@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { AlertTriangle, Shield, TrendingDown, BarChart3, Target, Zap } from "lucide-react"
 import { useState, useEffect } from "react"
-import { realDataService } from "@/lib/real-data-service"
+import { dataService } from "@/lib/data-service"
 import { RiskMetrics } from "@/lib/types"
 
 interface RiskAnalyticsProps {
@@ -25,7 +25,7 @@ export function RiskAnalytics({ selectedStock }: RiskAnalyticsProps) {
       setLoading(true)
       setError(null)
       try {
-        const risk = await realDataService.getRiskMetrics(selectedStock)
+        const risk = await dataService.getRiskMetrics(selectedStock)
         setRiskMetrics(risk)
       } catch (err: any) {
         setError(err.message || 'Failed to fetch risk data')

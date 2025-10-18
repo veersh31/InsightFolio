@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { MessageSquare, TrendingUp, TrendingDown, Newspaper, Twitter, Users } from "lucide-react"
 import { useState, useEffect } from "react"
-import { realDataService } from "@/lib/real-data-service"
+import { dataService } from "@/lib/data-service"
 import { SentimentData, NewsItem } from "@/lib/types"
 
 interface SentimentAnalysisProps {
@@ -28,8 +28,8 @@ export function SentimentAnalysis({ selectedStock }: SentimentAnalysisProps) {
       setError(null)
       try {
         const [sentiment, news] = await Promise.all([
-          realDataService.getSentimentData(selectedStock),
-          realDataService.getNews(selectedStock, 10)
+          dataService.getSentimentData(selectedStock),
+          dataService.getNews(selectedStock, 10)
         ])
         setSentimentData(sentiment)
         setNewsData(news)

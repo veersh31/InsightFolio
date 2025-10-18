@@ -1,8 +1,7 @@
 import { useState } from "react"
-import { portfolioOptimizer, OptimizedPortfolio } from "@/lib/portfolio-optimizer"
-import { realDataService } from "@/lib/real-data-service"
+import { portfolioOptimizer, type OptimizedPortfolio } from "@/lib/portfolio-optimizer"
 
-export { OptimizedPortfolio }
+export type { OptimizedPortfolio }
 
 export function usePortfolioOptimizer(portfolio: { symbol: string; shares: string; avgCost: string }[]) {
   const [result, setResult] = useState<OptimizedPortfolio | null>(null)
@@ -21,17 +20,21 @@ export function usePortfolioOptimizer(portfolio: { symbol: string; shares: strin
       // Convert portfolio to holdings format with current prices
       const holdings = await Promise.all(
         valid.map(async (row) => {
-          const stock = await realDataService.getStock(row.symbol)
-          if (!stock) {
+          // Use the API route instead of calling dataService directly
+          const response = await fetch(`/api/stocks/${row.symbol}`)
+          const result = await response.json()
+
+          if (!result.success || !result.data) {
             throw new Error(`Could not fetch data for ${row.symbol}`)
           }
-          
+
+          const stock = result.data
           const shares = parseFloat(row.shares)
           const avgCost = parseFloat(row.avgCost)
           const marketValue = shares * stock.price
           const gainLoss = marketValue - shares * avgCost
           const gainLossPercent = (gainLoss / (shares * avgCost)) * 100
-          
+
           return {
             symbol: row.symbol,
             name: stock.name,
